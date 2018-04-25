@@ -1,5 +1,5 @@
 /**
- * メニューアイテム注文プロセス
+ * 座席予約注文プロセス
  * @ignore
  */
 
@@ -69,67 +69,47 @@ async function main() {
         auth: auth
     });
 
-    // 固定でイベント指定
-    const eventType = kwskfsapi.factory.eventType.FoodEvent;
-    const eventIdentifier = 'FoodEvent-pearlbowl-40th-frontiers-seagulls';
+    // const restaurants = await organizationService.searchRestaurants({});
+    // console.log(restaurants.length, 'restaurants found.', restaurants);
 
-    const restaurants = await organizationService.search({
-        organizationType: kwskfsapi.factory.organizationType.Restaurant,
-        identifiers: ['TTBreweryKawasakiLaCittadella'],
-        limit: 100
-    });
-    console.log(restaurants.length, 'restaurants found.', restaurants);
-
-    const selectedRestaurant = restaurants[0];
+    // const restaurants = await organizationService.searchRestaurantOrders({ identifier: restaurants[0].identifier });
+    // console.log(restaurants.length, 'restaurants found.', restaurants);
 
     const placeOrderTransactionService = new kwskfsapi.service.transaction.PlaceOrder({
         endpoint: API_ENDPOINT,
         auth: auth
     });
 
+    // 固定で販売者設定
+    const sellerId = '5adae4d6f36d2843be76a1bf';
+    const sellerType = kwskfsapi.factory.organizationType.SportsTeam;
+    const sellerIdentifier = 'KawasakiFrontale';
+
+    // 固定でイベント指定
+    const eventType = kwskfsapi.factory.eventType.SportsEvent;
+    const eventIdentifier = 'SportsEvent-pearlbowl-40th-frontiers-seagulls';
+
     const transaction = await placeOrderTransactionService.start({
         expires: moment().add(30, 'minutes').toDate(),
-        sellerId: selectedRestaurant.id
+        sellerId: sellerId
     });
     console.log('transaction started.', transaction.id);
 
-    let menuItemAuthorizations = [];
+    let seatReservationAuthorizations = [];
 
-    // メニュー一つ目追加
-    let selectedMenuItem = selectedRestaurant.hasMenu[0].hasMenuSection[0].hasMenuItem[0];
-    let selectedOffer = selectedMenuItem.offers[0];
-    console.log('authorizing menu item...', selectedMenuItem.identifier, selectedOffer.identifier);
-    let menuItemAuthorization = await placeOrderTransactionService.createMenuItemEventReservationAuthorization({
+    // 座席予約承認追加
+    console.log('authorizing seat reservation...');
+    let seatReservationAuthorization = await placeOrderTransactionService.createSeatEventReservationAuthorization({
         transactionId: transaction.id,
         eventType: eventType,
-        eventIdentifier: eventIdentifier,
-        menuItemIdentifier: selectedMenuItem.identifier,
-        offerIdentifier: selectedOffer.identifier,
-        acceptedQuantity: 1,
-        organizationIdentifier: selectedRestaurant.identifier
+        eventIdentifier: eventIdentifier
     });
-    console.log('menu item authorized.', menuItemAuthorization);
-    menuItemAuthorizations.push(menuItemAuthorization);
-
-    // メニュー二つ目選択
-    selectedMenuItem = selectedRestaurant.hasMenu[0].hasMenuSection[1].hasMenuItem[0];
-    selectedOffer = selectedMenuItem.offers[0];
-    console.log('authorizing menu item...', selectedMenuItem.identifier, selectedOffer.identifier);
-    menuItemAuthorization = await placeOrderTransactionService.createMenuItemEventReservationAuthorization({
-        transactionId: transaction.id,
-        eventType: eventType,
-        eventIdentifier: eventIdentifier,
-        menuItemIdentifier: selectedMenuItem.identifier,
-        offerIdentifier: selectedOffer.identifier,
-        acceptedQuantity: 2,
-        organizationIdentifier: selectedRestaurant.identifier
-    });
-    console.log('menu item authorized.', menuItemAuthorization);
-    menuItemAuthorizations.push(menuItemAuthorization);
+    console.log('seat reservation authorized.', seatReservationAuthorization);
+    seatReservationAuthorizations.push(seatReservationAuthorization);
 
     const pecorinoAuthorization = await placeOrderTransactionService.createPecorinoAuthorization({
         transactionId: transaction.id,
-        price: menuItemAuthorizations.reduce((a, b) => a + b.result.price, 0)
+        price: seatReservationAuthorizations.reduce((a, b) => a + b.result.price, 0)
     });
     console.log('pecorino authorized.', pecorinoAuthorization);
 
