@@ -69,13 +69,18 @@ async function main() {
         auth: auth
     });
 
+    const personService = new kwskfsapi.service.Person({
+        endpoint: API_ENDPOINT,
+        auth: auth
+    });
+
     // 固定でイベント指定
     const eventType = kwskfsapi.factory.eventType.FoodEvent;
     const eventIdentifier = 'FoodEvent-pearlbowl-40th-frontiers-seagulls';
 
     const restaurants = await organizationService.search({
         organizationType: kwskfsapi.factory.organizationType.Restaurant,
-        identifiers: ['TTBreweryKawasakiLaCittadella'],
+        // identifiers: ['TTBreweryKawasakiLaCittadella'],
         limit: 100
     });
     console.log(restaurants.length, 'restaurants found.', restaurants);
@@ -127,16 +132,18 @@ async function main() {
     console.log('menu item authorized.', menuItemAuthorization);
     menuItemAuthorizations.push(menuItemAuthorization);
 
+    const accounts = await personService.findAccounts({ personId: 'me' });
+    if (accounts.length === 0) {
+        throw new Error('Account not found.');
+    }
+
     const pecorinoAuthorization = await placeOrderTransactionService.createPecorinoAuthorization({
         transactionId: transaction.id,
-        price: menuItemAuthorizations.reduce((a, b) => a + b.result.price, 0)
+        price: menuItemAuthorizations.reduce((a, b) => a + b.result.price, 0),
+        fromAccountId: accounts[0].id
     });
     console.log('pecorino authorized.', pecorinoAuthorization);
 
-    const personService = new kwskfsapi.service.Person({
-        endpoint: API_ENDPOINT,
-        auth: auth
-    });
     const contact = await personService.getContacts({ personId: 'me' });
 
     await placeOrderTransactionService.setCustomerContact({
