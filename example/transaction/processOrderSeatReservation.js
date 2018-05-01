@@ -68,30 +68,49 @@ async function main() {
         endpoint: API_ENDPOINT,
         auth: auth
     });
-
-    // const restaurants = await organizationService.searchRestaurants({});
-    // console.log(restaurants.length, 'restaurants found.', restaurants);
-
-    // const restaurants = await organizationService.searchRestaurantOrders({ identifier: restaurants[0].identifier });
-    // console.log(restaurants.length, 'restaurants found.', restaurants);
-
+    const personService = new kwskfsapi.service.Person({
+        endpoint: API_ENDPOINT,
+        auth: auth
+    });
+    const eventService = new kwskfsapi.service.Event({
+        endpoint: API_ENDPOINT,
+        auth: auth
+    });
     const placeOrderTransactionService = new kwskfsapi.service.transaction.PlaceOrder({
         endpoint: API_ENDPOINT,
         auth: auth
     });
 
     // 固定で販売者設定
-    const sellerId = '5adae4d6f36d2843be76a1bf';
     const sellerType = kwskfsapi.factory.organizationType.SportsTeam;
     const sellerIdentifier = 'KawasakiFrontale';
 
-    // 固定でイベント指定
-    const eventType = kwskfsapi.factory.eventType.SportsEvent;
-    const eventIdentifier = 'SportsEvent-pearlbowl-40th-frontiers-seagulls';
+    // スポーツチーム検索
+    const sportsTeams = await organizationService.search({
+        organizationType: kwskfsapi.factory.organizationType.SportsTeam,
+        // identifiers: ['KawasakiFrontale'],
+        limit: 1
+    });
+    console.log(sportsTeams.length, 'sportsTeams found.');
+    if (sportsTeams.length === 0) {
+        throw new Error('sportsTeams not found.');
+    }
+    // スポーツチーム確定
+    const sportsTeam = sportsTeams[0];
 
+    // スポーツイベント検索
+    const sportsEvents = await eventService.search({ eventType: kwskfsapi.factory.eventType.SportsEvent });
+    console.log(sportsEvents.length, 'sportsEvents found.');
+    if (sportsEvents.length === 0) {
+        throw new Error('sportsEvents not found.');
+    }
+    // スポーツイベント確定
+    const sportsEvent = sportsEvents[0];
+
+    // 注文取引開始
     const transaction = await placeOrderTransactionService.start({
         expires: moment().add(30, 'minutes').toDate(),
-        sellerId: sellerId
+        sellerId: sportsTeam.id
     });
     console.log('transaction started.', transaction.id);
 
@@ -101,30 +120,35 @@ async function main() {
     console.log('authorizing seat reservation...');
     let seatReservationAuthorization = await placeOrderTransactionService.createSeatEventReservationAuthorization({
         transactionId: transaction.id,
-        eventType: eventType,
-        eventIdentifier: eventIdentifier
+        eventType: sportsEvent.typeOf,
+        eventIdentifier: sportsEvent.identifier
     });
     console.log('seat reservation authorized.', seatReservationAuthorization);
     seatReservationAuthorizations.push(seatReservationAuthorization);
 
+    // 口座取得
+    const accounts = await personService.findAccounts({ personId: 'me' });
+    if (accounts.length === 0) {
+        throw new Error('Account not found.');
+    }
+
+    // 口座オーソリ取得
     const pecorinoAuthorization = await placeOrderTransactionService.createPecorinoAuthorization({
         transactionId: transaction.id,
-        price: seatReservationAuthorizations.reduce((a, b) => a + b.result.price, 0)
+        price: seatReservationAuthorizations.reduce((a, b) => a + b.result.price, 0),
+        fromAccountId: accounts[0].id
     });
     console.log('pecorino authorized.', pecorinoAuthorization);
 
-    const personService = new kwskfsapi.service.Person({
-        endpoint: API_ENDPOINT,
-        auth: auth
-    });
+    // 連絡先追加
     const contact = await personService.getContacts({ personId: 'me' });
-
     await placeOrderTransactionService.setCustomerContact({
         transactionId: transaction.id,
         contact: contact
     });
     console.log('contact set.', contact);
 
+    // 注文確定
     const order = await placeOrderTransactionService.confirm({
         transactionId: transaction.id
     });
