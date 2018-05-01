@@ -81,10 +81,6 @@ async function main() {
         auth: auth
     });
 
-    // 固定で販売者設定
-    const sellerType = kwskfsapi.factory.organizationType.SportsTeam;
-    const sellerIdentifier = 'KawasakiFrontale';
-
     // スポーツチーム検索
     const sportsTeams = await organizationService.search({
         organizationType: kwskfsapi.factory.organizationType.SportsTeam,

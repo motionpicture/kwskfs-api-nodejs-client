@@ -68,23 +68,36 @@ async function main() {
         endpoint: API_ENDPOINT,
         auth: auth
     });
-
     const personService = new kwskfsapi.service.Person({
         endpoint: API_ENDPOINT,
         auth: auth
     });
+    const eventService = new kwskfsapi.service.Event({
+        endpoint: API_ENDPOINT,
+        auth: auth
+    });
 
-    // 固定でイベント指定
-    const eventType = kwskfsapi.factory.eventType.FoodEvent;
-    const eventIdentifier = 'FoodEvent-pearlbowl-40th-frontiers-seagulls';
+    // フードイベント検索
+    const foodEvents = await eventService.search({ eventType: kwskfsapi.factory.eventType.FoodEvent });
+    console.log(foodEvents.length, 'foodEvents found.');
+    if (foodEvents.length === 0) {
+        throw new Error('foodEvents not found.');
+    }
+    // フードイベント確定
+    const foodEvent = foodEvents[0];
+    console.log('foodEvent:', foodEvent);
 
+    // レストラン検索
     const restaurants = await organizationService.search({
         organizationType: kwskfsapi.factory.organizationType.Restaurant,
-        // identifiers: ['TTBreweryKawasakiLaCittadella'],
+        identifiers: foodEvent.attendee.map((a) => a.identifier),
         limit: 100
     });
-    console.log(restaurants.length, 'restaurants found.', restaurants);
-
+    if (restaurants.length === 0) {
+        throw new Error('restaurants not found.');
+    }
+    console.log(restaurants.length, 'restaurants found.');
+    // レストラン確定
     const selectedRestaurant = restaurants[0];
 
     const placeOrderTransactionService = new kwskfsapi.service.transaction.PlaceOrder({
@@ -106,8 +119,8 @@ async function main() {
     console.log('authorizing menu item...', selectedMenuItem.identifier, selectedOffer.identifier);
     let menuItemAuthorization = await placeOrderTransactionService.createMenuItemEventReservationAuthorization({
         transactionId: transaction.id,
-        eventType: eventType,
-        eventIdentifier: eventIdentifier,
+        eventType: foodEvent.typeOf,
+        eventIdentifier: foodEvent.identifier,
         menuItemIdentifier: selectedMenuItem.identifier,
         offerIdentifier: selectedOffer.identifier,
         acceptedQuantity: 1,
@@ -122,8 +135,8 @@ async function main() {
     console.log('authorizing menu item...', selectedMenuItem.identifier, selectedOffer.identifier);
     menuItemAuthorization = await placeOrderTransactionService.createMenuItemEventReservationAuthorization({
         transactionId: transaction.id,
-        eventType: eventType,
-        eventIdentifier: eventIdentifier,
+        eventType: foodEvent.typeOf,
+        eventIdentifier: foodEvent.identifier,
         menuItemIdentifier: selectedMenuItem.identifier,
         offerIdentifier: selectedOffer.identifier,
         acceptedQuantity: 2,
@@ -132,6 +145,7 @@ async function main() {
     console.log('menu item authorized.', menuItemAuthorization);
     menuItemAuthorizations.push(menuItemAuthorization);
 
+    // 口座検索
     const accounts = await personService.findAccounts({ personId: 'me' });
     if (accounts.length === 0) {
         throw new Error('Account not found.');
@@ -144,14 +158,15 @@ async function main() {
     });
     console.log('pecorino authorized.', pecorinoAuthorization);
 
+    // 連絡先追加
     const contact = await personService.getContacts({ personId: 'me' });
-
     await placeOrderTransactionService.setCustomerContact({
         transactionId: transaction.id,
         contact: contact
     });
     console.log('contact set.', contact);
 
+    // 注文追加
     const order = await placeOrderTransactionService.confirm({
         transactionId: transaction.id
     });
