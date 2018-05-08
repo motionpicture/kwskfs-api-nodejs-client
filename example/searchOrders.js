@@ -27,7 +27,9 @@ async function main() {
     });
 
     const orders = await orderService.search({
-        sellerId: '5adae69ff36d2843be76a1e5'
+        sellerId: '5adae69ff36d2843be76a1e5',
+        orderDateFrom: moment().add(-40, 'minutes').toDate(),
+        orderDateThrough: moment().add(-20, 'minutes').toDate()
     });
     console.log(orders.length, 'orders found.');
 }
