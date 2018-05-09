@@ -38,7 +38,10 @@ async function main() {
     const restaurant = offers[0];
     const menuItem = restaurant.hasMenu[0].hasMenuSection[0].hasMenuItem[0];
     const offer = menuItem.offers[0];
+    console.log('target offer availability is', offer.availability);
+
     const targetAvailability = kwskfsapi.factory.itemAvailability.InStock;
+    console.log('changing availability to...', targetAvailability);
     await eventService.changeMenuItemOfferAvailability({
         eventType: kwskfsapi.factory.eventType.FoodEvent,
         eventIdentifier: eventIdentifier,
