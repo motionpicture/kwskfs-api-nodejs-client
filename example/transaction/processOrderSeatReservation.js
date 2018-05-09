@@ -129,12 +129,27 @@ async function main() {
     }
 
     // 口座オーソリ取得
-    const pecorinoAuthorization = await placeOrderTransactionService.createPecorinoAuthorization({
+    // const pecorinoAuthorization = await placeOrderTransactionService.createPecorinoAuthorization({
+    //     transactionId: transaction.id,
+    //     price: seatReservationAuthorizations.reduce((a, b) => a + b.result.price, 0),
+    //     fromAccountId: accounts[0].id
+    // });
+    // console.log('pecorino authorized.', pecorinoAuthorization);
+
+    // クレジットカードオーソリ取得
+    const creditCardAuthorization = await placeOrderTransactionService.createCreditCardAuthorization({
         transactionId: transaction.id,
-        price: seatReservationAuthorizations.reduce((a, b) => a + b.result.price, 0),
-        fromAccountId: accounts[0].id
+        orderId: moment().unix(),
+        amount: seatReservationAuthorizations.reduce((a, b) => a + b.result.price, 0),
+        method: '1',
+        creditCard: {
+            cardNo: '4111111111111111',
+            // cardPass?: string;
+            expire: '1812',
+            holderName: 'AA AA'
+        }
     });
-    console.log('pecorino authorized.', pecorinoAuthorization);
+    console.log('credit authorized.', creditCardAuthorization);
 
     // 連絡先追加
     const contact = await personService.getContacts({ personId: 'me' });
