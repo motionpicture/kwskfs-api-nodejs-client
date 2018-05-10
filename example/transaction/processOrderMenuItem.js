@@ -168,7 +168,8 @@ async function main() {
 
     // 注文追加
     const order = await placeOrderTransactionService.confirm({
-        transactionId: transaction.id
+        transactionId: transaction.id,
+        sendEmailMessage: true
     });
     console.log('transaction confirmed.', order);
 }
