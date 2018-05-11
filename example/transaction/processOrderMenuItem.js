@@ -146,20 +146,26 @@ async function main() {
     menuItemAuthorizations.push(menuItemAuthorization);
 
     // 口座検索
+    const contact = await personService.getContacts({ personId: 'me' });
     const accounts = await personService.findAccounts({ personId: 'me' });
-    if (accounts.length === 0) {
-        throw new Error('Account not found.');
+    let account = accounts[0];
+    if (account === undefined) {
+        // 口座がなければ開設
+        account = await personService.openAccount({
+            personId: 'me',
+            name: `${contact.familyName} ${contact.givenName}`,
+            initialBalance: 100000000
+        });
     }
 
     const pecorinoAuthorization = await placeOrderTransactionService.createPecorinoAuthorization({
         transactionId: transaction.id,
         price: menuItemAuthorizations.reduce((a, b) => a + b.result.price, 0),
-        fromAccountId: accounts[0].id
+        fromAccountId: account.id
     });
     console.log('pecorino authorized.', pecorinoAuthorization);
 
     // 連絡先追加
-    const contact = await personService.getContacts({ personId: 'me' });
     await placeOrderTransactionService.setCustomerContact({
         transactionId: transaction.id,
         contact: contact

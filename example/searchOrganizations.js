@@ -71,7 +71,7 @@ async function main() {
 
     const restaurants = await organizationService.search({
         organizationType: kwskfsapi.factory.organizationType.Restaurant,
-        identifiers: ['TTBreweryKawasakiLaCittadella'],
+        identifiers: [],
         limit: 100
     });
     console.log(restaurants.length, 'restaurants found.', restaurants);
